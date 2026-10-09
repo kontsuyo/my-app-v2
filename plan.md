@@ -7,11 +7,11 @@
 
 ## Phase 0: プロジェクト初期設定
 
-- [ ] リポジトリ構成を決定(`backend/` と `frontend/` のモノレポ or 分割)
-- [ ] `.gitignore` を作成(Python / Node / macOS / 環境変数)
-- [ ] Git リポジトリ初期化・初回コミット
-- [ ] `README.md` にプロジェクト概要を記載
-- [ ] `.env.example` を作成(DB接続情報・シークレットのテンプレート)
+- [x] リポジトリ構成を決定(`backend/` と `frontend/` のモノレポ or 分割)
+- [x] `.gitignore` を作成(Python / Node / macOS / 環境変数)
+- [x] Git リポジトリ初期化・初回コミット
+- [x] `README.md` にプロジェクト概要を記載
+- [x] `.env.example` を作成(DB接続情報・シークレットのテンプレート)
 
 ---
 
@@ -23,37 +23,38 @@
 
 ### 1.1 環境構築
 
-- [ ] `backend/` ディレクトリ作成
-- [ ] uv で Python 3.12 仮想環境を作成(`uv venv`)
-- [ ] 依存パッケージを追加(`uv add django djangorestframework psycopg python-dotenv`)
-- [ ] `pyproject.toml` / `uv.lock` がコミット対象になっていることを確認
-- [ ] `uv run django-admin startproject config .` でプロジェクト作成
-- [ ] VS Code のインタープリタに `.venv` を指定(補完・型チェックを有効化)
-- [ ] `settings.py` を環境変数ベースに分割(SECRET_KEY / DEBUG / DB を env から読む)
+- [x] `backend/` ディレクトリ作成
+- [x] uv で Python 3.12 仮想環境を作成(`uv venv`)
+- [x] 依存パッケージを追加(`uv add django djangorestframework psycopg python-dotenv`)
+- [x] `pyproject.toml` / `uv.lock` がコミット対象になっていることを確認
+- [x] `uv run django-admin startproject config .` でプロジェクト作成
+- [x] VS Code のインタープリタに `.venv` を指定(補完・型チェックを有効化)
+- [x] `settings.py` を環境変数ベースに分割(SECRET_KEY / DEBUG / DB を env から読む)
 
 ### 1.2 データベース接続
 
-- [ ] PostgreSQL を Docker で起動(`docker run` or 単体の compose サービス)
-- [ ] `settings.py` の DATABASES を PostgreSQL に設定
-- [ ] 初回マイグレーション実行・接続確認
+- [x] PostgreSQL を Docker で起動(`docker run` or 単体の compose サービス)
+- [x] `settings.py` の DATABASES を PostgreSQL に設定
+- [x] 初回マイグレーション実行・接続確認
 
 ### 1.3 カスタムユーザーモデル
 
-- [ ] `accounts` アプリ作成
-- [ ] `AbstractUser` を拡張したカスタム User モデルを定義(email をログインIDに)
-- [ ] `AUTH_USER_MODEL` を設定
-- [ ] マイグレーション作成・適用
-- [ ] `createsuperuser` で管理ユーザー作成・admin ログイン確認
+- [x] `accounts` アプリ作成
+- [x] `AbstractUser` を拡張したカスタム User モデルを定義(email をログインIDに)
+- [x] `AUTH_USER_MODEL` を設定
+- [x] マイグレーション作成・適用
+- [x] `createsuperuser` で管理ユーザー作成・admin ログイン確認
 
 ---
 
 ## Phase 2: ドメインモデル(Post / Like)
 
-- [ ] `posts` アプリ作成
-- [ ] `Post` モデル定義(user, image_url, brand, model, caption, timestamps)
-- [ ] `Like` モデル定義(user, post, `unique_together`)
-- [ ] マイグレーション作成・適用
-- [ ] admin に Post / Like を登録して管理画面から動作確認
+- [x] `posts` アプリ作成
+- [x] `Post` モデル定義(user, image_url, brand, model, caption, timestamps)
+- [x] `Like` モデル定義(user, post, `unique_together`)
+- [x] マイグレーション作成・適用
+- [x] admin に Post / Like を登録して管理画面から動作確認
+- [x] Post / Like モデルのテスト(フィールド・timestamps・CASCADE・重複防止)
 
 ---
 
@@ -61,11 +62,11 @@
 
 ### 3.1 認証(JWT)
 
-- [ ] `djangorestframework-simplejwt` を導入
-- [ ] `/api/v1/auth/register/`(ユーザー登録)実装
-- [ ] `/api/v1/auth/login/`(access/refresh 発行)実装
-- [ ] `/api/v1/auth/token/refresh/` 実装
-- [ ] `/api/v1/auth/me/`(ログインユーザー取得)実装
+- [x] `djangorestframework-simplejwt` を導入
+- [x] `/api/v1/auth/register/`(ユーザー登録)実装
+- [x] `/api/v1/auth/login/`(access/refresh 発行)実装
+- [x] `/api/v1/auth/token/refresh/` 実装
+- [x] `/api/v1/auth/me/`(ログインユーザー取得)実装
 
 ### 3.2 投稿 CRUD
 

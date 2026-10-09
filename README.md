@@ -6,12 +6,12 @@ API 設計と AWS 上での本番運用構成を重点的に扱う。
 
 ## 技術スタック
 
-| 領域 | 技術 |
-| ---- | ---- |
-| バックエンド | Python 3.12 / Django 5 / Django REST Framework / JWT |
-| データベース | PostgreSQL 16 |
-| フロントエンド | Next.js 15 / TypeScript / Tailwind CSS / shadcn/ui |
-| インフラ | AWS(ECS Fargate / RDS / S3 + CloudFront)/ GitHub Actions |
+| 領域           | 技術                                                     |
+| -------------- | -------------------------------------------------------- |
+| バックエンド   | Python 3.12 / Django 5 / Django REST Framework / JWT     |
+| データベース   | PostgreSQL 16                                            |
+| フロントエンド | Next.js 15 / TypeScript / Tailwind CSS / shadcn/ui       |
+| インフラ       | AWS(ECS Fargate / RDS / S3 + CloudFront)/ GitHub Actions |
 
 詳細は [docs/SPEC.md](docs/SPEC.md)、実装手順は [plan.md](plan.md) を参照。
 
