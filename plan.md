@@ -78,8 +78,8 @@
 
 ### 3.3 権限制御
 
-- [ ] `IsAuthenticatedOrReadOnly` を全体に適用
-- [ ] `IsOwnerOrReadOnly`(オブジェクトレベル権限)を実装し update/destroy に適用
+- [x] `IsAuthenticatedOrReadOnly` を全体に適用
+- [x] `IsOwnerOrReadOnly`(オブジェクトレベル権限)を実装し update/destroy に適用
 
 ### 3.4 いいね
 

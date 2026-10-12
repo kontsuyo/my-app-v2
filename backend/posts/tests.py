@@ -152,6 +152,25 @@ class PostApiTests(TestCase):
         self.assertIsNone(response.data["previous"])
         self.assertEqual(len(response.data["results"]), 1)
 
+    def test_anonymous_user_can_retrieve_post(self):
+        """未ログインでも投稿の詳細を取得できる仕様を保証する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="test-password-123",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+
+        response = client.get(f"/api/v1/posts/{post.pk}/", HTTP_HOST="localhost")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["id"], post.pk)
+
     def test_authenticated_user_can_create_post_as_the_author(self):
         author = User.objects.create_user(
             username="author",
@@ -176,6 +195,23 @@ class PostApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["user"], {"id": author.id, "username": "author"})
         self.assertEqual(Post.objects.get().user, author)
+
+    def test_anonymous_user_cannot_create_post(self):
+        """認証必須の投稿作成で匿名利用者を拒否する。"""
+        client = APIClient()
+
+        response = client.post(
+            "/api/v1/posts/",
+            {
+                "image_url": "https://cdn.example.com/boots.jpg",
+                "brand": "RED WING",
+            },
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(Post.objects.exists())
 
     def test_post_list_uses_fixed_query_count_for_authors_and_likes(self):
         first_author = User.objects.create_user(
@@ -235,6 +271,38 @@ class PostApiTests(TestCase):
         post.refresh_from_db()
         self.assertEqual(post.caption, "One year of wear")
 
+    def test_authenticated_non_owner_cannot_update_post(self):
+        """投稿者以外の更新でデータが変化しないことを保証する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="test-password",
+        )
+        other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="test-password",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+            caption="Original caption",
+        )
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+
+        response = client.patch(
+            f"/api/v1/posts/{post.pk}/",
+            {"caption": "Unauthorized change"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        post.refresh_from_db()
+        self.assertEqual(post.caption, "Original caption")
+
     def test_authenticated_user_can_delete_post(self):
         author = User.objects.create_user(
             username="author",
@@ -256,6 +324,34 @@ class PostApiTests(TestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Post.objects.filter(pk=post.pk).exists())
+
+    def test_authenticated_non_owner_cannot_delete_post(self):
+        """投稿者以外の削除を拒否して投稿を保持する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="test-password",
+        )
+        other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="test-password",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+
+        response = client.delete(
+            f"/api/v1/posts/{post.pk}/",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Post.objects.filter(pk=post.pk).exists())
 
     def test_post_list_returns_next_page_after_ten_posts(self):
         author = User.objects.create_user(

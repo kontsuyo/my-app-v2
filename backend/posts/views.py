@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 
 from posts.models import Like, Post
+from posts.permissions import IsOwnerOrReadOnly
 from posts.serializers import PostSerializer
 
 
@@ -40,4 +41,4 @@ class PostListCreateView(PostQuerysetMixin, generics.ListCreateAPIView):
 
 
 class PostDetailView(PostQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
-    pass
+    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
