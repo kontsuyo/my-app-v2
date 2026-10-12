@@ -70,11 +70,11 @@
 
 ### 3.2 投稿 CRUD
 
-- [ ] `PostSerializer` 実装(user ネスト、like_count / liked_by_me を含む)
-- [ ] `PostViewSet` 実装(list / retrieve / create / update / destroy)
-- [ ] Router で `/api/v1/posts/` を登録
-- [ ] N+1 対策(`select_related('user')` / `annotate(like_count=...)`)
-- [ ] ページネーション設定(PageNumberPagination)
+- [x] `PostSerializer` 実装(user ネスト、like_count / liked_by_me を含む)
+- [x] `PostViewSet` 実装(list / retrieve / create / update / destroy)
+- [x] Router で `/api/v1/posts/` を登録
+- [x] N+1 対策(`select_related('user')` / `annotate(like_count=...)`)
+- [x] ページネーション設定(PageNumberPagination)
 
 ### 3.3 権限制御
 
