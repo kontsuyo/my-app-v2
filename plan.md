@@ -83,9 +83,9 @@
 
 ### 3.4 いいね
 
-- [ ] `POST /api/v1/posts/{id}/like/`(いいね)実装
-- [ ] `DELETE /api/v1/posts/{id}/like/`(いいね解除)実装
-- [ ] 二重いいね防止のバリデーション
+- [x] `POST /api/v1/posts/{id}/like/`(いいね)実装
+- [x] `DELETE /api/v1/posts/{id}/like/`(いいね解除)実装
+- [x] 二重いいね防止のバリデーション
 
 ### 3.5 画像アップロード(S3 署名付きURL)
 

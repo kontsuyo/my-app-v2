@@ -408,3 +408,170 @@ class PostApiTests(TestCase):
         self.assertEqual(response.data["like_count"], 1)
         self.assertTrue(response.data["liked_by_me"])
         self.assertEqual(response.data["user"], {"id": author.id, "username": "author"})
+
+    def test_authenticated_user_can_like_post_and_metadata_is_updated(self):
+        """いいね追加後、投稿詳細APIで件数と自分がいいね済みかを確認する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="pass12345",
+        )
+        liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass12345",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+        client.force_authenticate(user=liker)
+
+        response = client.post(
+            f"/api/v1/posts/{post.pk}/like/",
+            HTTP_HOST="localhost",
+        )
+        detail = client.get(f"/api/v1/posts/{post.pk}/", HTTP_HOST="localhost")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Like.objects.filter(user=liker, post=post).count(), 1)
+        self.assertEqual(detail.data["like_count"], 1)
+        self.assertTrue(detail.data["liked_by_me"])
+
+    def test_repeating_like_does_not_create_duplicate_or_increment_count(self):
+        """同じいいね要求を繰り返しても一件だけに保つ。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="pass12345",
+        )
+        liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass12345",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+        client.force_authenticate(user=liker)
+        url = f"/api/v1/posts/{post.pk}/like/"
+
+        first_response = client.post(url, HTTP_HOST="localhost")
+        second_response = client.post(url, HTTP_HOST="localhost")
+        detail = client.get(f"/api/v1/posts/{post.pk}/", HTTP_HOST="localhost")
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(Like.objects.filter(user=liker, post=post).count(), 1)
+        self.assertEqual(detail.data["like_count"], 1)
+
+    def test_authenticated_user_can_unlike_without_removing_other_likes(self):
+        """解除時に本人のいいねだけが消えることを確認する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="pass12345",
+        )
+        liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass12345",
+        )
+        other_liker = User.objects.create_user(
+            username="other-liker",
+            email="other-liker@example.com",
+            password="pass12345",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        Like.objects.create(user=liker, post=post)
+        Like.objects.create(user=other_liker, post=post)
+        client = APIClient()
+        client.force_authenticate(user=liker)
+
+        response = client.delete(
+            f"/api/v1/posts/{post.pk}/like/",
+            HTTP_HOST="localhost",
+        )
+        detail = client.get(f"/api/v1/posts/{post.pk}/", HTTP_HOST="localhost")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Like.objects.filter(user=liker, post=post).exists())
+        self.assertTrue(Like.objects.filter(user=other_liker, post=post).exists())
+        self.assertEqual(detail.data["like_count"], 1)
+        self.assertFalse(detail.data["liked_by_me"])
+
+    def test_unlike_without_existing_like_succeeds(self):
+        """いいね未登録の状態で解除しても成功し、いいねが作成されないことを確認する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="pass12345",
+        )
+        liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass12345",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+        client.force_authenticate(user=liker)
+
+        response = client.delete(
+            f"/api/v1/posts/{post.pk}/like/",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Like.objects.filter(user=liker, post=post).exists())
+
+    def test_anonymous_user_cannot_like_or_unlike_post(self):
+        """いいね操作を認証済み利用者に限定する。"""
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="pass12345",
+        )
+        post = Post.objects.create(
+            user=author,
+            image_url="https://cdn.example.com/boots.jpg",
+            brand="RED WING",
+        )
+        client = APIClient()
+        url = f"/api/v1/posts/{post.pk}/like/"
+
+        like_response = client.post(url, HTTP_HOST="localhost")
+        unlike_response = client.delete(url, HTTP_HOST="localhost")
+
+        self.assertEqual(like_response.status_code, 401)
+        self.assertEqual(unlike_response.status_code, 401)
+        self.assertFalse(Like.objects.filter(post=post).exists())
+
+    def test_like_and_unlike_return_not_found_for_missing_post(self):
+        """存在しない投稿への操作を404として扱う。"""
+        liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass12345",
+        )
+        client = APIClient()
+        client.force_authenticate(user=liker)
+        url = "/api/v1/posts/999999/like/"
+
+        like_response = client.post(url, HTTP_HOST="localhost")
+        unlike_response = client.delete(url, HTTP_HOST="localhost")
+
+        self.assertEqual(like_response.status_code, 404)
+        self.assertEqual(unlike_response.status_code, 404)

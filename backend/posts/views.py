@@ -1,8 +1,9 @@
 from django.db.models import Count, Exists, OuterRef
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 from posts.models import Like, Post
 from posts.permissions import IsOwnerOrReadOnly
@@ -42,3 +43,19 @@ class PostListCreateView(PostQuerysetMixin, generics.ListCreateAPIView):
 
 class PostDetailView(PostQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
+
+
+class PostLikeView(generics.GenericAPIView):
+    queryset = Post.objects.all()
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        post = self.get_object()
+        # 同じユーザーが同じ投稿に何度いいねしても、重複登録されないようにするため。
+        Like.objects.get_or_create(user=request.user, post=post)
+        return Response(status=status.HTTP_200_OK)
+
+    def delete(self, request, *args, **kwargs):
+        post = self.get_object()
+        Like.objects.filter(user=request.user, post=post).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
