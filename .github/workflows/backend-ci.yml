@@ -1,0 +1,63 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: patina
+          POSTGRES_USER: patina
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U patina -d patina"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      POSTGRES_DB: patina
+      POSTGRES_USER: patina
+      POSTGRES_PASSWORD: ci-password
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install backend dependencies
+        run: uv sync --locked --project backend
+
+      - name: Lint Python
+        run: uv run --project backend ruff check backend
+
+      - name: Check Python formatting
+        run: uv run --project backend ruff format --check backend
+
+      - name: Check Django configuration
+        run: uv run --project backend python backend/manage.py check
+
+      - name: Check for missing migrations
+        run: uv run --project backend python backend/manage.py makemigrations --check --dry-run
+
+      - name: Run backend tests
+        run: uv run --project backend pytest backend
