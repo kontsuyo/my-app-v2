@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Git: Safe Pull",
+      "type": "process",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/safe-pull.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
