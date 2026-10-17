@@ -595,24 +595,27 @@ class UploadApiTests(TestCase):
         key = "uploads/0123456789abcdef0123456789abcdef.jpg"
         image_bytes = b"x" * 33
 
-        with tempfile.TemporaryDirectory() as media_root, override_settings(
-            AWS_STORAGE_BUCKET_NAME="",
-            DATA_UPLOAD_MAX_MEMORY_SIZE=16,
-            MAX_UPLOAD_SIZE=32,
-            MEDIA_ROOT=media_root,
-            MEDIA_URL="/media/",
-            STORAGES={
-                "default": {
-                    "BACKEND": "django.core.files.storage.FileSystemStorage",
-                    "OPTIONS": {
-                        "location": media_root,
-                        "base_url": "/media/",
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            override_settings(
+                AWS_STORAGE_BUCKET_NAME="",
+                DATA_UPLOAD_MAX_MEMORY_SIZE=16,
+                MAX_UPLOAD_SIZE=32,
+                MEDIA_ROOT=media_root,
+                MEDIA_URL="/media/",
+                STORAGES={
+                    "default": {
+                        "BACKEND": "django.core.files.storage.FileSystemStorage",
+                        "OPTIONS": {
+                            "location": media_root,
+                            "base_url": "/media/",
+                        },
+                    },
+                    "staticfiles": {
+                        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
                     },
                 },
-                "staticfiles": {
-                    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-                },
-            },
+            ),
         ):
             response = client.put(
                 f"/api/v1/uploads/local/{key}",
@@ -645,23 +648,26 @@ class UploadApiTests(TestCase):
         client.force_authenticate(user=user)
         image_bytes = b"local image content"
 
-        with tempfile.TemporaryDirectory() as media_root, override_settings(
-            AWS_STORAGE_BUCKET_NAME="",
-            DEBUG=True,
-            MEDIA_ROOT=media_root,
-            MEDIA_URL="/media/",
-            STORAGES={
-                "default": {
-                    "BACKEND": "django.core.files.storage.FileSystemStorage",
-                    "OPTIONS": {
-                        "location": media_root,
-                        "base_url": "/media/",
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            override_settings(
+                AWS_STORAGE_BUCKET_NAME="",
+                DEBUG=True,
+                MEDIA_ROOT=media_root,
+                MEDIA_URL="/media/",
+                STORAGES={
+                    "default": {
+                        "BACKEND": "django.core.files.storage.FileSystemStorage",
+                        "OPTIONS": {
+                            "location": media_root,
+                            "base_url": "/media/",
+                        },
+                    },
+                    "staticfiles": {
+                        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
                     },
                 },
-                "staticfiles": {
-                    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-                },
-            },
+            ),
         ):
             presign_response = client.post(
                 "/api/v1/uploads/presign/",

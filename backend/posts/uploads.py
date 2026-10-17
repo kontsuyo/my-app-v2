@@ -18,9 +18,7 @@ from rest_framework.views import APIView
 from posts.serializers import UploadPresignSerializer
 
 logger = logging.getLogger(__name__)
-LOCAL_UPLOAD_KEY_PATTERN = re.compile(
-    r"uploads/[0-9a-f]{32}\.(?:jpg|jpeg|png|webp)\Z"
-)
+LOCAL_UPLOAD_KEY_PATTERN = re.compile(r"uploads/[0-9a-f]{32}\.(?:jpg|jpeg|png|webp)\Z")
 
 
 def make_image_url(bucket_name, region_name, key):
