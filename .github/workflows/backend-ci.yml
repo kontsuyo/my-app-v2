@@ -10,6 +10,16 @@ permissions:
   contents: read
 
 jobs:
+  git-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Test safe pull
+        run: bash scripts/tests/safe-pull-test.sh
+
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
