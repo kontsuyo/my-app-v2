@@ -1,10 +1,15 @@
 from datetime import timedelta
+from pathlib import Path
+import tempfile
 from types import SimpleNamespace
+from urllib.parse import urlparse
+from unittest.mock import patch
 
 from accounts.models import User
+from botocore.exceptions import ClientError
 from django.contrib.auth.models import AnonymousUser
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -575,3 +580,243 @@ class PostApiTests(TestCase):
 
         self.assertEqual(like_response.status_code, 404)
         self.assertEqual(unlike_response.status_code, 404)
+
+
+class UploadApiTests(TestCase):
+    def test_local_upload_returns_payload_too_large_for_oversized_image(self):
+        """設定した上限を超える画像に413を返す。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        key = "uploads/0123456789abcdef0123456789abcdef.jpg"
+        image_bytes = b"x" * 33
+
+        with tempfile.TemporaryDirectory() as media_root, override_settings(
+            AWS_STORAGE_BUCKET_NAME="",
+            DATA_UPLOAD_MAX_MEMORY_SIZE=16,
+            MAX_UPLOAD_SIZE=32,
+            MEDIA_ROOT=media_root,
+            MEDIA_URL="/media/",
+            STORAGES={
+                "default": {
+                    "BACKEND": "django.core.files.storage.FileSystemStorage",
+                    "OPTIONS": {
+                        "location": media_root,
+                        "base_url": "/media/",
+                    },
+                },
+                "staticfiles": {
+                    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+                },
+            },
+        ):
+            response = client.put(
+                f"/api/v1/uploads/local/{key}",
+                image_bytes,
+                content_type="image/jpeg",
+                HTTP_HOST="localhost",
+            )
+
+        self.assertEqual(response.status_code, 413)
+
+    def test_anonymous_user_cannot_upload_to_local_media(self):
+        """ローカル保存先へのPUTも認証済み利用者に限定する。"""
+        response = APIClient().put(
+            "/api/v1/uploads/local/uploads/0123456789abcdef0123456789abcdef.jpg",
+            b"image content",
+            content_type="image/jpeg",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_local_upload_fallback_stores_image_in_media(self):
+        """S3未設定時に画像をMEDIAへ保存し、表示URLを返す。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        image_bytes = b"local image content"
+
+        with tempfile.TemporaryDirectory() as media_root, override_settings(
+            AWS_STORAGE_BUCKET_NAME="",
+            DEBUG=True,
+            MEDIA_ROOT=media_root,
+            MEDIA_URL="/media/",
+            STORAGES={
+                "default": {
+                    "BACKEND": "django.core.files.storage.FileSystemStorage",
+                    "OPTIONS": {
+                        "location": media_root,
+                        "base_url": "/media/",
+                    },
+                },
+                "staticfiles": {
+                    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+                },
+            },
+        ):
+            presign_response = client.post(
+                "/api/v1/uploads/presign/",
+                {"filename": "boots.jpg", "content_type": "image/jpeg"},
+                format="json",
+                HTTP_HOST="localhost",
+            )
+            upload_path = urlparse(presign_response.data["upload_url"]).path
+            upload_response = client.put(
+                upload_path,
+                image_bytes,
+                content_type="image/jpeg",
+                HTTP_HOST="localhost",
+            )
+
+            self.assertEqual(presign_response.status_code, 200)
+            self.assertEqual(upload_response.status_code, 201)
+            key = upload_path.split("/uploads/local/", 1)[1]
+            self.assertEqual(
+                urlparse(upload_response.data["image_url"]).path,
+                f"/media/{key}",
+            )
+            saved_path = Path(media_root) / key
+            self.assertEqual(saved_path.read_bytes(), image_bytes)
+
+    @override_settings(
+        AWS_STORAGE_BUCKET_NAME="test-images",
+        AWS_S3_REGION_NAME="ap-northeast-1",
+    )
+    @patch("posts.uploads.boto3.client")
+    def test_presign_returns_service_unavailable_when_s3_signing_fails(
+        self,
+        mock_boto_client,
+    ):
+        """S3署名発行の障害を明示的な503として返す。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        mock_boto_client.return_value.generate_presigned_url.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
+            "PutObject",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.post(
+            "/api/v1/uploads/presign/",
+            {"filename": "boots.jpg", "content_type": "image/jpeg"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.data,
+            {"detail": "Image upload is temporarily unavailable."},
+        )
+
+    @override_settings(
+        AWS_STORAGE_BUCKET_NAME="test-images",
+        AWS_S3_REGION_NAME="ap-northeast-1",
+        AWS_S3_CUSTOM_DOMAIN="",
+    )
+    def test_presign_returns_s3_put_url_and_image_url(self):
+        """有効な画像にS3への署名付きPUT情報を返す。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AWS_ACCESS_KEY_ID": "test-access-key",
+                "AWS_SECRET_ACCESS_KEY": "test-secret-key",
+            },
+        ):
+            response = client.post(
+                "/api/v1/uploads/presign/",
+                {"filename": "boots.jpg", "content_type": "image/jpeg"},
+                format="json",
+                HTTP_HOST="localhost",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["method"], "PUT")
+        self.assertIn("X-Amz-Signature=", response.data["upload_url"])
+        self.assertEqual(
+            response.data["headers"],
+            {"Content-Type": "image/jpeg"},
+        )
+        self.assertTrue(
+            response.data["image_url"].startswith(
+                "https://test-images.s3.ap-northeast-1.amazonaws.com/uploads/"
+            )
+        )
+
+    def test_presign_rejects_content_type_and_extension_mismatch(self):
+        """Content-Typeと拡張子の不一致を拒否する。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.post(
+            "/api/v1/uploads/presign/",
+            {"filename": "boots.png", "content_type": "image/jpeg"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data,
+            {"filename": ["Filename extension does not match content type."]},
+        )
+
+    def test_presign_rejects_unsupported_content_type(self):
+        """許可されていない画像形式の署名URLを発行しない。"""
+        user = User.objects.create_user(
+            username="uploader",
+            email="uploader@example.com",
+            password="test-password",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.post(
+            "/api/v1/uploads/presign/",
+            {"filename": "boots.gif", "content_type": "image/gif"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data,
+            {"content_type": ["Unsupported image type."]},
+        )
+
+    def test_anonymous_user_cannot_request_upload_url(self):
+        """画像アップロードの準備を認証済み利用者に限定する。"""
+        response = APIClient().post(
+            "/api/v1/uploads/presign/",
+            {"filename": "boots.jpg", "content_type": "image/jpeg"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 401)
