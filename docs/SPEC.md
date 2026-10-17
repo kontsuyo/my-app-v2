@@ -188,16 +188,22 @@ erDiagram
 
 ### 5.3 画像アップロード
 
-| メソッド | パス                | 説明                            | 認証 |
-| -------- | ------------------- | ------------------------------- | ---- |
-| POST     | `/uploads/presign/` | S3署名付きアップロードURLを発行 | 必要 |
+| メソッド | パス                   | 説明                          | 認証 |
+| -------- | ---------------------- | ----------------------------- | ---- |
+| POST     | `/uploads/presign/`    | S3署名付きアップロードURLを発行 | 必要 |
+| PUT      | `/uploads/local/{key}` | S3未設定時に画像をMEDIAへ保存 | 必要 |
 
-**フロー(直PUT方式):**
+**リクエスト:** `filename` と `content_type` を JSON で送る。Content-Type と拡張子は JPEG (`.jpg` / `.jpeg`)、PNG (`.png`)、WebP (`.webp`) の組み合わせに限る。ファイル名は保存キーに使わず、サーバーでランダムなキーを生成する。
 
-1. フロントが `/uploads/presign/` にファイル名・Content-Typeを送る
-2. DRFがS3の署名付きPUT URLを返す
-3. フロントがそのURLへ画像を直接PUT(サーバーを経由しないため負荷分散)
-4. 成功後、返ってきた `image_url` を `/posts/` の作成リクエストに含める
+**S3フロー:**
+
+1. DRFは `upload_url`、`image_url`、`method: "PUT"`、`headers` を返す。署名URLの有効期限は5分。
+2. フロントは `upload_url` へ `headers` を付けて画像を直接 PUT する。
+3. 成功後、`image_url` を `/posts/` の作成リクエストに含める。
+
+**ローカルフロー:** S3バケット未設定時は `upload_url` が認証必須の `/uploads/local/{key}` を指す。フロントは同じく PUT し、成功レスポンスの `image_url` を投稿に使う。ファイルは Django MEDIA に保存され、DEBUG時は開発サーバーから配信される。ローカルアップロードの上限は10 MiB。
+
+S3設定は `AWS_STORAGE_BUCKET_NAME` と `AWS_S3_REGION_NAME` を使い、任意の `AWS_S3_CUSTOM_DOMAIN` で `image_url` の配信ドメインを指定できる(ホスト名のみ)。本番で非公開バケットを使う場合は、CloudFrontのドメインを設定し、CloudFront経由の読み取りを許可する。ローカルはFileSystemStorage、S3設定時はdjango-storagesのS3Storageへ切り替える。
 
 ### 5.4 いいね
 

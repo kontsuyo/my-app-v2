@@ -89,10 +89,10 @@
 
 ### 3.5 画像アップロード(S3 署名付きURL)
 
-- [ ] `boto3` を導入
-- [ ] `POST /api/v1/uploads/presign/`(署名付きPUT URL 発行)実装
-- [ ] ローカル開発用に MEDIA 保存へフォールバックできる仕組み(`django-storages`)
-- [ ] Content-Type / 拡張子のバリデーション
+- [x] `boto3` を導入
+- [x] `POST /api/v1/uploads/presign/`(署名付きPUT URL 発行)実装
+- [x] ローカル開発用に MEDIA 保存へフォールバックできる仕組み(`django-storages`)
+- [x] Content-Type / 拡張子のバリデーション
 
 ---
 
