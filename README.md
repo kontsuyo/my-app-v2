@@ -8,7 +8,7 @@ API 設計と AWS 上での本番運用構成を重点的に扱う。
 
 | 領域           | 技術                                                     |
 | -------------- | -------------------------------------------------------- |
-| バックエンド   | Python 3.12 / Django 5 / Django REST Framework / JWT     |
+| バックエンド   | Python 3.12 / Django 5 / Django REST Framework / JWT・セッション認証 |
 | データベース   | PostgreSQL 16                                            |
 | フロントエンド | Next.js 15 / TypeScript / Tailwind CSS / shadcn/ui       |
 | インフラ       | AWS(ECS Fargate / RDS / S3 + CloudFront)/ GitHub Actions |
@@ -96,6 +96,7 @@ cd backend && uv run mypy
 ```
 
 OpenAPI仕様は `/api/schema/`、Swagger UI は `/api/schema/swagger-ui/` で確認できる。
+Browsable API のログイン・ログアウトは `/api-auth/login/` と `/api-auth/logout/` を使用する。
 
 ### フロントエンド(準備中)
 

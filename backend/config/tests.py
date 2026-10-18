@@ -1,6 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
+import pytest
 import yaml
+
+from accounts.factories import UserFactory
 
 
 class ApiSchemaTests(TestCase):
@@ -33,3 +36,43 @@ def test_registration_endpoint_renders_browsable_api_for_html_requests(client):
     assert response.status_code == 200
     assert response["Content-Type"].startswith("text/html")
     assert b'name="username"' in response.content
+
+
+def test_browsable_api_exposes_login_link_for_html_requests(client):
+    """Browsable APIからセッションログイン画面へ移動できることを保証する。"""
+    response = client.get(
+        "/api/v1/auth/register/",
+        HTTP_ACCEPT="text/html",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == 200
+    assert b"/api-auth/login/" in response.content
+
+
+@pytest.mark.django_db
+def test_browsable_api_login_authenticates_session_requests(client):
+    """ログイン後にAPI認証とログアウト導線が有効になることを保証する。"""
+    user = UserFactory(email="browser@example.com")
+
+    login_response = client.post(
+        "/api-auth/login/",
+        {"username": user.email, "password": "test-password"},
+        HTTP_HOST="localhost",
+    )
+    profile_response = client.get(
+        "/api/v1/auth/me/",
+        HTTP_ACCEPT="application/json",
+        HTTP_HOST="localhost",
+    )
+    browsable_response = client.get(
+        "/api/v1/auth/register/",
+        HTTP_ACCEPT="text/html",
+        HTTP_HOST="localhost",
+    )
+
+    assert login_response.status_code == 302
+    assert profile_response.status_code == 200
+    assert profile_response.json()["email"] == user.email
+    assert browsable_response.status_code == 200
+    assert b"/api-auth/logout/" in browsable_response.content
