@@ -20,3 +20,16 @@ class ApiSchemaTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="swagger-ui"')
+
+
+def test_registration_endpoint_renders_browsable_api_for_html_requests(client):
+    """HTMLリクエストで登録APIのフォームを表示し、ブラウザーから操作できる。"""
+    response = client.get(
+        "/api/v1/auth/register/",
+        HTTP_ACCEPT="text/html",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("text/html")
+    assert b'name="username"' in response.content
