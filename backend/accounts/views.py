@@ -9,9 +9,7 @@ class RegistrationView(CreateAPIView):
     serializer_class = RegistrationSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response(
-            {"detail": "Submit a POST request to register a user."}
-        )
+        return Response({"detail": "Submit a POST request to register a user."})
 
 
 class CurrentUserView(RetrieveAPIView):
