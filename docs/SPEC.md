@@ -176,6 +176,8 @@ erDiagram
 | POST     | `/auth/token/refresh/` | アクセストークン再発行               | 不要(refresh必須) |
 | GET      | `/auth/me/`            | ログイン中ユーザー情報取得           | 必要              |
 
+OpenAPI仕様: `/api/schema/`。Swagger UI: `/api/schema/swagger-ui/`。
+
 ### 5.2 投稿
 
 | メソッド | パス           | 説明                       | 認証 |

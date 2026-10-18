@@ -30,12 +30,12 @@ class PostSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "user", "like_count", "liked_by_me", "created_at")
 
-    def get_like_count(self, post):
+    def get_like_count(self, post) -> int:
         if hasattr(post, "like_count"):
             return post.like_count
         return post.likes.count()
 
-    def get_liked_by_me(self, post):
+    def get_liked_by_me(self, post) -> bool:
         if hasattr(post, "liked_by_me"):
             return post.liked_by_me
         request = self.context.get("request")

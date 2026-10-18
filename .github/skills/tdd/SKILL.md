@@ -39,17 +39,19 @@ Kent Beck の "Test-Driven Development: By Example" と、和田卓人（t_wada�
 
 ## このプロジェクトでのテスト実行
 
+- **新規テストは pytest 形式**で書いてください。モジュールレベルの `def test_...()` と通常の `assert` を使い、共通の準備には必要に応じて `@pytest.fixture` を使ってください。DB を使うテストには `@pytest.mark.django_db` または `db` fixture を使ってください。
+- **既存の Django `TestCase` は一括変換しません。** 既存テストの修正では現在の形式を保持し、新規ケースは既存クラスへのメソッド追加ではなく pytest 関数として追加してください。同じモジュールで両形式を併用できます。
 - **Phase 3の開始前に `pytest` と `pytest-django` を開発依存として追加**し、以降のバックエンドテストではpytestを使ってください。
   ```bash
   uv add --dev pytest pytest-django
   ```
 - **TDDループでは `--reuse-db` を付け、変更中のテストだけを指定して実行**してください。マイグレーション変更後などテストDBを作り直す必要がある場合は `--create-db` を使います。
   ```bash
-  uv run pytest --reuse-db accounts/tests.py::UserModelTests::test_duplicate_email_raises_integrity_error
+  uv run --project backend pytest -c backend/pyproject.toml --reuse-db backend/accounts/tests.py::test_duplicate_email_raises_integrity_error
   ```
 - 各機能の完了時や共有コード変更後は、バックエンドの全テストを実行してください。
   ```bash
-  uv run pytest --reuse-db
+  uv run --project backend pytest -c backend/pyproject.toml --reuse-db backend
   ```
 - `factory_boy` はPhase 4で必要になった時点で追加してください。pytest-xdistの並列実行は初期化コストがあるため、テスト数が増えてから必要に応じて導入してください。
 - バックエンドは `backend/` 配下、Djangoアプリ単位でテストを配置してください（`accounts/tests.py` または `accounts/tests/` ディレクトリ）。

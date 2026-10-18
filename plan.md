@@ -98,13 +98,13 @@
 
 ## Phase 4: 品質担保(テスト・ドキュメント)
 
-- [ ] `pytest` / `pytest-django` / `factory_boy` を導入
-- [ ] User / Post / Like の factory 作成
-- [ ] 認証 API のテスト(登録・ログイン・トークン更新)
-- [ ] 投稿 CRUD のテスト(正常系・異常系・権限)
-- [ ] いいね API のテスト(付与・解除・二重防止)
-- [ ] `drf-spectacular` を導入し `/api/schema/swagger-ui/` を有効化
-- [ ] `ruff` / `black` / `mypy` の設定と CI 前チェック
+- [x] `pytest` / `pytest-django` / `factory_boy` を導入
+- [x] User / Post / Like の factory 作成
+- [x] 認証 API のテスト(登録・ログイン・トークン更新)
+- [x] 投稿 CRUD のテスト(正常系・異常系・権限)
+- [x] いいね API のテスト(付与・解除・二重防止)
+- [x] `drf-spectacular` を導入し `/api/schema/swagger-ui/` を有効化
+- [x] `ruff` / `black` / `mypy` の設定と CI 前チェック
 
 ---
 

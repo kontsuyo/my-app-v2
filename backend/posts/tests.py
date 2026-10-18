@@ -13,8 +13,25 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.factories import UserFactory
 from posts.models import Like, Post
 from posts.serializers import PostSerializer
+from posts.factories import LikeFactory, PostFactory
+
+
+class FactoryTests(TestCase):
+    def test_factories_create_related_users_posts_and_likes(self):
+        """テストデータに使えるよう、各factoryが関連モデルまでDBに保存することを保証する。"""
+        post = PostFactory()
+        like = LikeFactory(post=post)
+
+        self.assertTrue(like.user.check_password("test-password"))
+        self.assertEqual(like.post, post)
+        self.assertTrue(Post.objects.filter(pk=post.pk).exists())
+        self.assertTrue(
+            Like.objects.filter(pk=like.pk, post=post, user=like.user).exists()
+        )
+        self.assertTrue(User.objects.filter(pk=like.user.pk).exists())
 
 
 class PostModelTests(TestCase):
@@ -136,6 +153,22 @@ class PostSerializerTests(TestCase):
 
 
 class PostApiTests(TestCase):
+    def test_create_post_rejects_missing_brand(self):
+        """必須のブランドがない投稿を保存しない。"""
+        author = UserFactory()
+        client = APIClient()
+        client.force_authenticate(user=author)
+
+        response = client.post(
+            "/api/v1/posts/",
+            {"image_url": "https://cdn.example.com/boots.jpg"},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Post.objects.exists())
+
     def test_anonymous_user_can_list_posts_with_pagination(self):
         author = User.objects.create_user(
             username="author",

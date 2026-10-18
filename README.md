@@ -86,6 +86,17 @@ uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
+バックエンドのテスト・品質チェックはリポジトリ直下から実行する。
+
+```bash
+uv run --project backend pytest -c backend/pyproject.toml backend
+uv run --project backend ruff check backend
+uv run --project backend black --check backend
+cd backend && uv run mypy
+```
+
+OpenAPI仕様は `/api/schema/`、Swagger UI は `/api/schema/swagger-ui/` で確認できる。
+
 ### フロントエンド(準備中)
 
 ```bash

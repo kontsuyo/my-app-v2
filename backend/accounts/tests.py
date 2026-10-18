@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from accounts.models import User
+from accounts.factories import UserFactory
 
 
 class UserModelTests(TestCase):
@@ -73,6 +74,24 @@ class RegistrationApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(email="new-user@example.com").exists())
+
+    def test_register_rejects_duplicate_email(self):
+        """登録済みメールアドレスでユーザーを重複作成しない。"""
+        UserFactory(email="existing@example.com")
+
+        response = self.client.post(
+            "/api/v1/auth/register/",
+            {
+                "username": "another-user",
+                "email": "existing@example.com",
+                "password": "strong-pass-123",
+            },
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(User.objects.filter(email="existing@example.com").count(), 1)
 
 
 class LoginApiTests(TestCase):

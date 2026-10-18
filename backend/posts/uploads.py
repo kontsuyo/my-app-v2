@@ -14,6 +14,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from posts.serializers import UploadPresignSerializer
 
@@ -33,6 +35,15 @@ def make_image_url(bucket_name, region_name, key):
 class UploadPresignView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=UploadPresignSerializer,
+        responses={
+            200: OpenApiResponse(description="Presigned upload and image URLs."),
+            400: OpenApiResponse(description="Invalid image metadata."),
+            401: OpenApiResponse(description="Authentication is required."),
+            503: OpenApiResponse(description="The upload service is unavailable."),
+        },
+    )
     def post(self, request):
         serializer = UploadPresignSerializer(data=request.data)
         if not serializer.is_valid():
@@ -90,6 +101,16 @@ class UploadPresignView(APIView):
 class LocalUploadView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=OpenApiTypes.BINARY,
+        responses={
+            201: OpenApiResponse(description="The uploaded image URL."),
+            400: OpenApiResponse(description="Invalid or empty image."),
+            401: OpenApiResponse(description="Authentication is required."),
+            404: OpenApiResponse(description="Invalid upload key."),
+            413: OpenApiResponse(description="The image exceeds the size limit."),
+        },
+    )
     def put(self, request, key):
         if not LOCAL_UPLOAD_KEY_PATTERN.fullmatch(key):
             return Response(
