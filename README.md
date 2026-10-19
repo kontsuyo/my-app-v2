@@ -111,6 +111,21 @@ cd backend && uv run mypy
 OpenAPI仕様は `/api/schema/`、Swagger UI は `/api/schema/swagger-ui/` で確認できる。
 Browsable API のログイン・ログアウトは `/api-auth/login/` と `/api-auth/logout/` を使用する。
 
+### Docker Compose(ローカル統合)
+
+リポジトリ直下で `.env` を用意し、API と PostgreSQL を起動する。
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+docker compose exec web uv run --frozen --no-dev python manage.py migrate
+docker compose exec web uv run --frozen --no-dev python manage.py createsuperuser
+```
+
+API は `http://localhost:8000` で利用できる。停止は `docker compose down`、
+DBデータも削除して初期化する場合は `docker compose down --volumes` を実行する。
+`.env` はローカル用途の設定なので、本番環境では Secrets Manager などから設定する。
+
 ### フロントエンド(準備中)
 
 ```bash

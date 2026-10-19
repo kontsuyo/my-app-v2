@@ -110,11 +110,11 @@
 
 ## Phase 5: ローカル統合(Docker Compose)
 
-- [ ] `backend/Dockerfile` 作成(gunicorn 起動)
-- [ ] `docker-compose.yml` 作成(`web` + `db`)
-- [ ] 環境変数を compose に接続
-- [ ] `docker compose up` で API + DB が起動することを確認
-- [ ] マイグレーション・スーパーユーザー作成を compose 上で実行
+- [x] `backend/Dockerfile` 作成(gunicorn 起動)
+- [x] `docker-compose.yml` 作成(`web` + `db`)
+- [x] 環境変数を compose に接続
+- [x] `docker compose up` で API + DB が起動することを確認
+- [x] マイグレーション・スーパーユーザー作成を compose 上で実行
 
 ---
 
