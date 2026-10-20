@@ -122,11 +122,15 @@
 
 ### 6.1 環境構築
 
-- [ ] `frontend/` に Next.js 15(App Router / TypeScript)を作成
-- [ ] Tailwind CSS 設定
-- [ ] shadcn/ui 初期化(Button / Card / Dialog / Form などを追加)
-- [ ] TanStack Query / React Hook Form / Zod 導入
-- [ ] API クライアント(fetch ラッパ)と JWT 保持の仕組みを実装
+- [x] `frontend/` に Next.js 15(App Router / TypeScript)を作成
+- [x] Tailwind CSS 設定
+- [x] shadcn/ui 初期化(Button / Card / Dialog / Form などを追加)
+- [x] TanStack Query / React Hook Form / Zod 導入
+- [x] API クライアント(fetch ラッパ)と JWT 保持の仕組みを実装
+- [x] Vitest / React Testing Library / `@testing-library/jest-dom` を導入し、コンポーネントテスト環境を設定
+- [x] MSW を導入し、テスト用 API モックを設定
+- [x] Playwright を導入し、主要な画面フローを検証する E2E テスト環境を設定
+- [x] 6.2 以降の各機能は、テストを先に書く Red → Green → Refactor で実装
 
 ### 6.2 認証画面
 
