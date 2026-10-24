@@ -138,14 +138,22 @@
 - [x] `/login`(ログインフォーム、トークン保存)
 - [x] 認証状態に応じたルートガード
 
-### 6.3 投稿機能
+### 6.3 認証の永続化・セッション維持
+
+- [ ] トークンを localStorage(または Cookie)へ永続化し、リロード後もセッション維持
+- [ ] アクセストークン失効時の 401 → refresh → リトライ処理を API クライアントに実装
+- [ ] ログアウト機能(トークン破棄 + `/login` へ遷移)
+- [ ] 認証状態をアプリ全体で共有(Context)し、`/auth/me/` でユーザー表示・ヘッダー出し分け
+- [ ] `SIMPLE_JWT` の access / refresh 有効期限を `settings.py` に明示(バックエンド)
+
+### 6.4 投稿機能
 
 - [ ] `/`(ギャラリー一覧、react-photo-album で Masonry 表示)
 - [ ] `/posts/[id]`(投稿詳細、Card + Dialog)
 - [ ] `/posts/new`(投稿作成、画像プレビュー + 署名付きURLで直PUT)
 - [ ] いいねボタン(楽観的更新)
 
-### 6.4 仕上げ
+### 6.5 仕上げ
 
 - [ ] 配色は Tailwind デフォルト(stone / amber)、フォントは Geist のまま
 - [ ] ローディング / エラー / 空状態の表示
@@ -170,6 +178,9 @@
 
 - [ ] ECS クラスタ / タスク定義 / サービス作成(Fargate)
 - [ ] ALB 作成・ターゲットグループ設定
+- [ ] `django-cors-headers` を導入し `CORS_ALLOWED_ORIGINS` を env から読む
+- [ ] ヘルスチェック用エンドポイント(`/healthz`)を実装し、ALB のヘルスチェックに設定
+- [ ] 本番セキュリティ設定(`SECURE_SSL_REDIRECT` / HSTS / secure cookie / `CSRF_TRUSTED_ORIGINS`)
 - [ ] マイグレーションを本番 DB に適用
 - [ ] API 疎通確認(ALB 経由)
 
@@ -178,6 +189,7 @@
 - [ ] S3 バケット作成(投稿画像用 / フロント配信用)
 - [ ] CloudFront ディストリビューション作成(画像 / フロント)
 - [ ] S3 は直アクセス禁止(CloudFront 経由のみ)に設定
+- [ ] `next.config` に `output: 'export'` を設定し、本番 `NEXT_PUBLIC_API_BASE_URL` を API ドメインへ向ける
 - [ ] `next build && next export` → S3 同期 → キャッシュ無効化
 - [ ] 本番環境で画像アップロード〜表示まで疎通確認
 
