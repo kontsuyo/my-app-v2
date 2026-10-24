@@ -140,9 +140,8 @@
 
 ### 6.3 認証の永続化・セッション維持
 
-- [ ] トークンを localStorage(または Cookie)へ永続化し、リロード後もセッション維持
+- [ ] トークンを localStorage へ永続化し、リロード後もセッション維持(暫定。後で HttpOnly Cookie へ移行)
 - [ ] アクセストークン失効時の 401 → refresh → リトライ処理を API クライアントに実装
-- [ ] ログアウト機能(トークン破棄 + `/login` へ遷移)
 - [ ] 認証状態をアプリ全体で共有(Context)し、`/auth/me/` でユーザー表示・ヘッダー出し分け
 - [ ] `SIMPLE_JWT` の access / refresh 有効期限を `settings.py` に明示(バックエンド)
 
@@ -158,6 +157,7 @@
 - [ ] 配色は Tailwind デフォルト(stone / amber)、フォントは Geist のまま
 - [ ] ローディング / エラー / 空状態の表示
 - [ ] レスポンシブ確認
+- [ ] (任意)ログアウト機能(トークン破棄 + `/login` へ遷移)
 
 ---
 
@@ -181,6 +181,7 @@
 - [ ] `django-cors-headers` を導入し `CORS_ALLOWED_ORIGINS` を env から読む
 - [ ] ヘルスチェック用エンドポイント(`/healthz`)を実装し、ALB のヘルスチェックに設定
 - [ ] 本番セキュリティ設定(`SECURE_SSL_REDIRECT` / HSTS / secure cookie / `CSRF_TRUSTED_ORIGINS`)
+- [ ] 認証を HttpOnly Cookie 方式へ移行(refresh=HttpOnly/Secure/SameSite Cookie・access=メモリ、CORS credentials 対応、CSRF 対策、localStorage 廃止)
 - [ ] マイグレーションを本番 DB に適用
 - [ ] API 疎通確認(ALB 経由)
 
@@ -191,6 +192,7 @@
 - [ ] S3 は直アクセス禁止(CloudFront 経由のみ)に設定
 - [ ] `next.config` に `output: 'export'` を設定し、本番 `NEXT_PUBLIC_API_BASE_URL` を API ドメインへ向ける
 - [ ] `next build && next export` → S3 同期 → キャッシュ無効化
+- [ ] Cookie 認証のため、フロントと API を同一親ドメイン化(または CloudFront で `/api` を ALB にルーティング)
 - [ ] 本番環境で画像アップロード〜表示まで疎通確認
 
 ### 7.5 ドメイン / 証明書
