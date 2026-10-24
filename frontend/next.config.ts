@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     if (process.env.NODE_ENV !== "development") {
       return [];
@@ -10,7 +11,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/v1/:path*",
-        destination: `${apiOrigin}/api/v1/:path*`,
+        destination: `${apiOrigin}/api/v1/:path*/`,
       },
     ];
   },

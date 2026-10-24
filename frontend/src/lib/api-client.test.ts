@@ -62,4 +62,26 @@ describe("API client", () => {
       message: "Authentication credentials were not provided.",
     });
   });
+
+  it("does not expose HTML error responses as API error messages", async () => {
+    /** HTMLの内部エラー情報を登録画面へ表示せず、情報漏えいを防ぐ。 */
+    server.use(
+      http.post(
+        "http://localhost:8000/api/v1/auth/register/",
+        () =>
+          new HttpResponse("<html><body>internal traceback</body></html>", {
+            status: 500,
+            headers: { "Content-Type": "text/html" },
+          }),
+      ),
+    );
+
+    await expect(
+      apiRequest("auth/register/", { method: "POST", body: { username: "bootslover" } }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      message: "API request failed with status 500",
+    });
+  });
 });

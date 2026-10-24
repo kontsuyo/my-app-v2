@@ -74,6 +74,7 @@ export async function apiRequest<T>(
 
   const responseText = await response.text();
   const contentType = response.headers.get("Content-Type") ?? "";
+  const isHtmlResponse = contentType.toLowerCase().includes("html");
   const payload =
     responseText.length === 0
       ? null
@@ -82,7 +83,7 @@ export async function apiRequest<T>(
         : responseText;
 
   if (!response.ok) {
-    throw new ApiError(response.status, payload);
+    throw new ApiError(response.status, isHtmlResponse ? null : payload);
   }
 
   return payload as T;
