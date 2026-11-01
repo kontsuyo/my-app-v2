@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 import pytest
@@ -76,3 +79,9 @@ def test_browsable_api_login_authenticates_session_requests(client):
     assert profile_response.json()["email"] == user.email
     assert browsable_response.status_code == 200
     assert b"/api-auth/logout/" in browsable_response.content
+
+
+def test_jwt_token_lifetimes_are_explicit():
+    """access は15分・refresh は7日と明示し、失効タイミングを設定から読み取れるようにする。"""
+    assert settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] == timedelta(minutes=15)
+    assert settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"] == timedelta(days=7)

@@ -140,10 +140,10 @@
 
 ### 6.3 認証の永続化・セッション維持
 
-- [ ] トークンを localStorage へ永続化し、リロード後もセッション維持(暫定。後で HttpOnly Cookie へ移行)
-- [ ] アクセストークン失効時の 401 → refresh → リトライ処理を API クライアントに実装
-- [ ] 認証状態をアプリ全体で共有(Context)し、`/auth/me/` でユーザー表示・ヘッダー出し分け
-- [ ] `SIMPLE_JWT` の access / refresh 有効期限を `settings.py` に明示(バックエンド)
+- [x] トークンを localStorage へ永続化し、リロード後もセッション維持(暫定。後で HttpOnly Cookie へ移行)
+- [x] アクセストークン失効時の 401 → refresh → リトライ処理を API クライアントに実装
+- [x] 認証状態をアプリ全体で共有(Context)し、`/auth/me/` でユーザー表示・ヘッダー出し分け
+- [x] `SIMPLE_JWT` の access / refresh 有効期限を `settings.py` に明示(バックエンド)
 
 ### 6.4 投稿機能
 

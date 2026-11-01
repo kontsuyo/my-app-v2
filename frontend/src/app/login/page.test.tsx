@@ -8,6 +8,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "@/app/login/page";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import { clearAuthTokens, getAccessToken } from "@/lib/auth-tokens";
 import { server } from "@/test/server";
 
@@ -23,10 +24,18 @@ afterEach(() => {
   push.mockClear();
 });
 
+function renderLoginPage() {
+  return render(
+    <AuthProvider>
+      <LoginPage />
+    </AuthProvider>,
+  );
+}
+
 describe("LoginPage", () => {
   it("shows validation errors when required fields are empty", async () => {
     /** 必須項目が空のままログイン処理へ進まないことを保証する。 */
-    render(<LoginPage />);
+    renderLoginPage();
     fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
 
     expect(await screen.findByText("メールアドレスを入力してください")).toBeVisible();
@@ -34,9 +43,14 @@ describe("LoginPage", () => {
   });
 
   it("stores received tokens and navigates home after login", async () => {
-    /** ログイン成功でJWTを保持し、ギャラリーへ遷移する。 */
+    /** ログイン成功でJWTを保持し、認証状態へ反映してからギャラリーへ遷移する。 */
     let requestBody: unknown;
+    let meAuthorization: string | null = null;
     server.use(
+      http.get("http://localhost:8000/api/v1/auth/me/", ({ request }) => {
+        meAuthorization = request.headers.get("Authorization");
+        return HttpResponse.json({ id: 1, username: "bootslover", email: "boots@example.com" });
+      }),
       http.post(
         "http://localhost:8000/api/v1/auth/login/",
         async ({ request }) => {
@@ -49,7 +63,7 @@ describe("LoginPage", () => {
       ),
     );
 
-    render(<LoginPage />);
+    renderLoginPage();
     fireEvent.change(screen.getByLabelText("メールアドレス"), {
       target: { value: "boots@example.com" },
     });
@@ -64,5 +78,6 @@ describe("LoginPage", () => {
       password: "strong-password",
     });
     expect(push).toHaveBeenCalledWith("/");
+    await waitFor(() => expect(meAuthorization).toBe("Bearer access-token"));
   });
 });

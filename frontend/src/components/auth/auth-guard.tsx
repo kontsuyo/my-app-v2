@@ -1,29 +1,40 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import { getAccessToken } from "@/lib/auth-tokens";
+import { useEffect, type ReactNode } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Button } from "@/components/ui/button";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const { status, retry } = useAuth();
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    if (status === "unauthenticated") {
       router.replace("/login");
-      return;
     }
+  }, [status, router]);
 
-    setAuthorized(true);
-  }, [router]);
+  if (status === "authenticated") {
+    return children;
+  }
 
-  if (!authorized) {
+  if (status === "error") {
     return (
-      <p className="p-6 text-center text-sm text-muted-foreground" role="status">
-        認証状態を確認しています。
-      </p>
+      <div className="flex flex-col items-center gap-3 p-6" role="alert">
+        <p className="text-sm text-muted-foreground">
+          認証状態を確認できませんでした。通信状況を確認して、もう一度お試しください。
+        </p>
+        <Button onClick={retry} type="button" variant="outline">
+          再試行
+        </Button>
+      </div>
     );
   }
 
-  return children;
+  return (
+    <p className="p-6 text-center text-sm text-muted-foreground" role="status">
+      認証状態を確認しています。
+    </p>
+  );
 }

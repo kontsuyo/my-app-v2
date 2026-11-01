@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api-client";
-import { setAuthTokens, type AuthTokens } from "@/lib/auth-tokens";
+import type { AuthTokens } from "@/lib/auth-tokens";
 
 const loginSchema = z.object({
   email: z
@@ -21,6 +22,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -32,7 +34,7 @@ export default function LoginPage() {
         method: "POST",
         body: values,
       });
-      setAuthTokens(tokens);
+      login(tokens);
       router.push("/");
     } catch (error) {
       form.setError("root", {
