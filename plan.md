@@ -49,6 +49,8 @@
 
 ## Phase 2: ドメインモデル(Post / Like)
 
+> 注: Phase 2〜4 および 6.4 は Post(1投稿=1枚)ベースの初期MVP。末尾の「ピボット」セクションで Item / ItemPhoto 中心へ刷新する(Patina Project 日本版)。
+
 - [x] `posts` アプリ作成
 - [x] `Post` モデル定義(user, image_url, brand, model, caption, timestamps)
 - [x] `Like` モデル定義(user, post, `unique_together`)
@@ -145,12 +147,14 @@
 - [x] 認証状態をアプリ全体で共有(Context)し、`/auth/me/` でユーザー表示・ヘッダー出し分け
 - [x] `SIMPLE_JWT` の access / refresh 有効期限を `settings.py` に明示(バックエンド)
 
-### 6.4 投稿機能
+### 6.4 投稿機能(Post ベース・ピボットで刷新)
 
-- [ ] `/`(ギャラリー一覧、react-photo-album で Masonry 表示)
-- [ ] `/posts/[id]`(投稿詳細、Card + Dialog)
-- [ ] `/posts/new`(投稿作成、画像プレビュー + 署名付きURLで直PUT)
-- [ ] いいねボタン(楽観的更新)
+> 末尾「ピボット」セクションで Item 中心のアイテム機能へ置き換える。
+
+- [x] `/`(ギャラリー一覧、react-photo-album で Masonry 表示)
+- [x] `/posts/[id]`(投稿詳細、Card + Dialog)
+- [x] `/posts/new`(投稿作成、画像プレビュー + 署名付きURLで直PUT)
+- [x] いいねボタン(楽観的更新)
 
 ### 6.5 仕上げ
 
@@ -158,6 +162,39 @@
 - [ ] ローディング / エラー / 空状態の表示
 - [ ] レスポンシブ確認
 - [ ] (任意)ログアウト機能(トークン破棄 + `/login` へ遷移)
+
+---
+
+## ピボット: Patina Project 日本版への刷新(Post → Item / ItemPhoto)
+
+> Phase 2〜4・6.4 は Post(1投稿=1枚)ベースの初期MVP。これを **Item(モノ)中心 + 同一 Item の時系列写真(ItemPhoto=育成記録)** へ刷新する(詳細は [docs/SPEC.md](docs/SPEC.md))。本番データは無い前提でスキーマを作り直し、バックエンドを先に完了させてからフロントへ進む。
+
+### バックエンド(先に実施)
+
+- [ ] `Item` モデル定義(user, brand, model, caption, acquired_at, timestamps)
+- [ ] `ItemPhoto` モデル定義(item=FK CASCADE, image_url, caption, taken_at, created_at)
+- [ ] `Like` を Item 参照へ変更(`unique_together(user, item)`)
+- [ ] 旧 `Post` モデル削除、マイグレーション作成・適用(makemigrations / migrate / --check)
+- [ ] admin / factory を Item / ItemPhoto / Like に更新
+- [ ] `ItemSerializer`(user ネスト、latest_photo、photo_count、like_count、liked_by_me)
+- [ ] `ItemPhotoSerializer`(image_url, caption, taken_at)
+- [ ] アイテム登録を `transaction.atomic` で Item + 初回 ItemPhoto 同時作成
+- [ ] ビュー: `/items/`(一覧=最新写真付き / 登録)、`/items/{id}/`(詳細=写真タイムライン / 更新 / 削除)
+- [ ] ネスト: `/items/{id}/photos/`(追加)、`/items/{id}/photos/{pid}/`(削除) — 親の所有者のみ
+- [ ] いいね: `/items/{id}/like/`(POST / DELETE)
+- [ ] N+1 対策(`select_related('user')` / `annotate(like_count=Count('likes'))` / 最新写真 Prefetch・サブクエリ)
+- [ ] 権限: `IsOwnerOrReadOnly` を Item と写真操作に適用
+- [ ] テスト更新(アイテム CRUD・写真追加/削除・タイムライン順・いいね・権限の正常/異常系)
+- [ ] drf-spectacular スキーマ再生成の確認
+
+### フロントエンド(アイテム機能)
+
+- [ ] `/`(ギャラリー一覧、各アイテムの最新写真を Masonry 表示)
+- [ ] `/items/[id]`(アイテム詳細、スペック + 写真タイムライン)
+- [ ] `/items/new`(アイテム登録、スペック + 初回写真プレビュー + 署名付きURLで直PUT)
+- [ ] 写真追加 Dialog(既存アイテムに育成記録を1枚追加)
+- [ ] いいねボタン(アイテム単位、楽観的更新)
+- [ ] 旧 `/posts/*` 画面・API クライアントの撤去
 
 ---
 

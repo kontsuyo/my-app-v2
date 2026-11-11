@@ -4,9 +4,11 @@
 
 ### 1.1 目的
 
-ブーツの写真を投稿・共有し、経年変化(Patina)を楽しむWebアプリケーションのようなSNS。
+ブーツなど革製品の経年変化(パティーナ)を記録・共有するWebアプリケーション。
+「Patina Project」(<https://www.patinaproject.com/>)の日本版を志向し、
+1枚ごとにバラバラな画像投稿ではなく、**アイテム(1足のモノ)を中心に、同一アイテムの写真を時系列で蓄積して“育成記録”を残す**点を核とする。
 本プロジェクトは **バックエンドエンジニアへの転職ポートフォリオ** を主目的とし、
-Django REST Framework による堅牢なAPI設計と、AWS上での本番運用構成を重点的にアピールする。
+Django REST Framework による堅牢なAPI設計(アイテムと時系列写真の1対多モデリング・集計)と、AWS上での本番運用構成を重点的にアピールする。
 
 ### 1.2 ターゲットユーザー
 
@@ -76,18 +78,21 @@ Django REST Framework による堅牢なAPI設計と、AWS上での本番運用�
 ### 3.1 MVPスコープ
 
 1. ユーザー登録・ログイン(JWT認証)
-2. ブーツ写真の投稿(画像アップロード + メタ情報)
-3. 投稿一覧(ギャラリー表示)
-4. 投稿詳細ページ
-5. いいね機能
+2. アイテム(ブーツ等)の登録(ブランド/モデル + 初回写真)
+3. アイテムへの写真追加(同一アイテムの経年変化=育成記録を時系列で蓄積)
+4. アイテム一覧(ギャラリー表示、各アイテムの最新写真をサムネイル表示)
+5. アイテム詳細ページ(スペック + 写真タイムライン)
+6. いいね機能(アイテム単位)
 
 ### 3.2 将来拡張(MVP対象外)
 
+- 構造化レビュー(多軸評価: 作り・耐久性・コスパ等)
+- ブランド/モデル/タンナー(革メーカー)別ディレクトリ
+- Q&A・Awards・パティーナ育成コンテスト
 - コメント機能
 - ユーザープロフィールページ
 - フォロー/フォロワー機能
 - タグ・カテゴリ検索
-- 経年変化の時系列記録(同一ブーツの複数写真をまとめる)
 
 ---
 
@@ -97,9 +102,10 @@ Django REST Framework による堅牢なAPI設計と、AWS上での本番運用�
 
 ```mermaid
 erDiagram
-    USER ||--o{ POST : "投稿する"
+    USER ||--o{ ITEM : "登録する"
     USER ||--o{ LIKE : "いいねする"
-    POST ||--o{ LIKE : "される"
+    ITEM ||--o{ ITEM_PHOTO : "育成記録"
+    ITEM ||--o{ LIKE : "される"
 
     USER {
         int id PK
@@ -108,20 +114,28 @@ erDiagram
         string password_hash
         datetime created_at
     }
-    POST {
+    ITEM {
         int id PK
         int user_id FK
-        string image_url
         string brand
         string model
         text caption
+        date acquired_at
         datetime created_at
         datetime updated_at
+    }
+    ITEM_PHOTO {
+        int id PK
+        int item_id FK
+        string image_url
+        text caption
+        date taken_at
+        datetime created_at
     }
     LIKE {
         int id PK
         int user_id FK
-        int post_id FK
+        int item_id FK
         datetime created_at
     }
 ```
@@ -138,28 +152,41 @@ erDiagram
 | password   | varchar      | not null         | ハッシュ化済 |
 | created_at | datetime     | auto_now_add     |              |
 
-#### Post
+#### Item(アイテム=1足のモノ。中心エンティティ)
 
-| カラム     | 型           | 制約                        | 説明                     |
-| ---------- | ------------ | --------------------------- | ------------------------ |
-| id         | BigAuto      | PK                          |                          |
-| user       | FK(User)     | not null, on_delete=CASCADE | 投稿者                   |
-| image_url  | varchar(500) | not null                    | S3上の画像URL            |
-| brand      | varchar(100) | not null                    | ブランド名(例: RED WING) |
-| model      | varchar(100) | blank可                     | モデル名/型番            |
-| caption    | text         | blank可                     | 説明文                   |
-| created_at | datetime     | auto_now_add                |                          |
-| updated_at | datetime     | auto_now                    |                          |
+| カラム      | 型           | 制約                        | 説明                      |
+| ----------- | ------------ | --------------------------- | ------------------------- |
+| id          | BigAuto      | PK                          |                           |
+| user        | FK(User)     | not null, on_delete=CASCADE | 所有者                    |
+| brand       | varchar(100) | not null                    | ブランド名(例: RED WING)  |
+| model       | varchar(100) | blank可                     | モデル名/型番             |
+| caption     | text         | blank可                     | 説明・メモ                |
+| acquired_at | date         | null可                      | 入手/使い始めの時期(任意) |
+| created_at  | datetime     | auto_now_add                |                           |
+| updated_at  | datetime     | auto_now                    |                           |
 
-#### Like
+> 一覧のサムネイルは最新の `ItemPhoto` を使う(Item 自身に画像は持たせない)。
+
+#### ItemPhoto(同一アイテムの写真を時系列で蓄積=育成記録)
+
+| カラム     | 型           | 制約                        | 説明                       |
+| ---------- | ------------ | --------------------------- | -------------------------- |
+| id         | BigAuto      | PK                          |                            |
+| item       | FK(Item)     | not null, on_delete=CASCADE | 対象アイテム               |
+| image_url  | varchar(500) | not null                    | S3上の画像URL              |
+| caption    | text         | blank可                     | その時点のメモ(例: 3年目)  |
+| taken_at   | date         | null可                      | 撮影日(タイムライン並び順) |
+| created_at | datetime     | auto_now_add                |                            |
+
+#### Like(アイテム単位)
 
 | カラム     | 型       | 制約                          | 説明           |
 | ---------- | -------- | ----------------------------- | -------------- |
 | id         | BigAuto  | PK                            |                |
 | user       | FK(User) | not null, on_delete=CASCADE   |                |
-| post       | FK(Post) | not null, on_delete=CASCADE   |                |
+| item       | FK(Item) | not null, on_delete=CASCADE   |                |
 | created_at | datetime | auto_now_add                  |                |
-| —          | —        | `unique_together(user, post)` | 二重いいね防止 |
+| —          | —        | `unique_together(user, item)` | 二重いいね防止 |
 
 ---
 
@@ -178,15 +205,19 @@ erDiagram
 
 OpenAPI仕様: `/api/schema/`。Swagger UI: `/api/schema/swagger-ui/`。
 
-### 5.2 投稿
+### 5.2 アイテム / 写真(育成記録)
 
-| メソッド | パス           | 説明                       | 認証 |
-| -------- | -------------- | -------------------------- | ---- |
-| GET      | `/posts/`      | 投稿一覧(ページネーション) | 不要 |
-| POST     | `/posts/`      | 投稿作成                   | 必要 |
-| GET      | `/posts/{id}/` | 投稿詳細                   | 不要 |
-| PATCH    | `/posts/{id}/` | 投稿更新(投稿者本人のみ)   | 必要 |
-| DELETE   | `/posts/{id}/` | 投稿削除(投稿者本人のみ)   | 必要 |
+| メソッド | パス                        | 説明                                         | 認証 |
+| -------- | --------------------------- | -------------------------------------------- | ---- |
+| GET      | `/items/`                   | アイテム一覧(ページネーション、最新写真付き) | 不要 |
+| POST     | `/items/`                   | アイテム登録(スペック + 初回写真を同時登録)  | 必要 |
+| GET      | `/items/{id}/`              | アイテム詳細(スペック + 写真タイムライン)    | 不要 |
+| PATCH    | `/items/{id}/`              | アイテム更新(所有者のみ)                     | 必要 |
+| DELETE   | `/items/{id}/`              | アイテム削除(所有者のみ)                     | 必要 |
+| POST     | `/items/{id}/photos/`       | 写真を追加して育成記録を伸ばす(所有者のみ)   | 必要 |
+| DELETE   | `/items/{id}/photos/{pid}/` | 写真を削除(所有者のみ)                       | 必要 |
+
+**アイテム登録リクエスト:** `brand`(必須)、`model`、`caption`、`acquired_at`、および初回写真の `image_url`(必須。任意で `taken_at`)を送る。バックエンドは Item と最初の ItemPhoto を1トランザクションで作成する。
 
 ### 5.3 画像アップロード
 
@@ -201,9 +232,9 @@ OpenAPI仕様: `/api/schema/`。Swagger UI: `/api/schema/swagger-ui/`。
 
 1. DRFは `upload_url`、`image_url`、`method: "PUT"`、`headers` を返す。署名URLの有効期限は5分。
 2. フロントは `upload_url` へ `headers` を付けて画像を直接 PUT する。
-3. 成功後、`image_url` を `/posts/` の作成リクエストに含める。
+3. 成功後、`image_url` を `/items/`(登録時)または `/items/{id}/photos/`(写真追加時)のリクエストに含める。
 
-**ローカルフロー:** S3バケット未設定時は `upload_url` が認証必須の `/uploads/local/{key}` を指す。フロントは同じく PUT し、成功レスポンスの `image_url` を投稿に使う。ファイルは Django MEDIA に保存され、DEBUG時は開発サーバーから配信される。ローカルアップロードの上限は10 MiB。
+**ローカルフロー:** S3バケット未設定時は `upload_url` が認証必須の `/uploads/local/{key}` を指す。フロントは同じく PUT し、成功レスポンスの `image_url` をアイテム登録/写真追加に使う。ファイルは Django MEDIA に保存され、DEBUG時は開発サーバーから配信される。ローカルアップロードの上限は10 MiB。
 
 S3設定は `AWS_STORAGE_BUCKET_NAME` と `AWS_S3_REGION_NAME` を使い、任意の `AWS_S3_CUSTOM_DOMAIN` で `image_url` の配信ドメインを指定できる(ホスト名のみ)。本番で非公開バケットを使う場合は、CloudFrontのドメインを設定し、CloudFront経由の読み取りを許可する。ローカルはFileSystemStorage、S3設定時はdjango-storagesのS3Storageへ切り替える。
 
@@ -211,26 +242,31 @@ S3設定は `AWS_STORAGE_BUCKET_NAME` と `AWS_S3_REGION_NAME` を使い、任�
 
 | メソッド | パス                | 説明       | 認証 |
 | -------- | ------------------- | ---------- | ---- |
-| POST     | `/posts/{id}/like/` | いいねする | 必要 |
-| DELETE   | `/posts/{id}/like/` | いいね解除 | 必要 |
+| POST     | `/items/{id}/like/` | いいねする | 必要 |
+| DELETE   | `/items/{id}/like/` | いいね解除 | 必要 |
 
 ### 5.5 レスポンス例
 
-`GET /api/v1/posts/`
+`GET /api/v1/items/`(一覧)
 
 ```json
 {
   "count": 42,
-  "next": "/api/v1/posts/?page=2",
+  "next": "/api/v1/items/?page=2",
   "previous": null,
   "results": [
     {
       "id": 12,
       "user": { "id": 3, "username": "boots_lover" },
-      "image_url": "https://cdn.example.com/posts/abc.jpg",
       "brand": "RED WING",
       "model": "8875",
-      "caption": "3年目のエイジング",
+      "caption": "育成中",
+      "latest_photo": {
+        "id": 84,
+        "image_url": "https://cdn.example.com/items/abc.jpg",
+        "taken_at": "2026-09-01"
+      },
+      "photo_count": 6,
       "like_count": 15,
       "liked_by_me": true,
       "created_at": "2026-09-01T10:00:00Z"
@@ -239,12 +275,33 @@ S3設定は `AWS_STORAGE_BUCKET_NAME` と `AWS_S3_REGION_NAME` を使い、任�
 }
 ```
 
+`GET /api/v1/items/12/`(詳細。写真は `taken_at` 昇順のタイムライン)
+
+```json
+{
+  "id": 12,
+  "user": { "id": 3, "username": "boots_lover" },
+  "brand": "RED WING",
+  "model": "8875",
+  "caption": "育成中",
+  "acquired_at": "2023-09-01",
+  "like_count": 15,
+  "liked_by_me": true,
+  "photos": [
+    { "id": 40, "image_url": "https://cdn.example.com/items/new.jpg", "caption": "購入直後", "taken_at": "2023-09-01" },
+    { "id": 84, "image_url": "https://cdn.example.com/items/abc.jpg", "caption": "3年目", "taken_at": "2026-09-01" }
+  ],
+  "created_at": "2023-09-01T10:00:00Z"
+}
+```
+
 ### 5.6 バックエンド設計上のアピール実装
 
-- **N+1対策**: 一覧取得時に `select_related('user')` / `annotate(like_count=Count('likes'))` を使用
+- **N+1対策**: 一覧で `select_related('user')` / `annotate(like_count=Count('likes'))`、最新写真は `Prefetch` またはサブクエリで取得
 - **ページネーション**: `PageNumberPagination`(または `CursorPagination`)
-- **権限制御**: `IsAuthenticatedOrReadOnly` + オブジェクトレベル権限(`IsOwnerOrReadOnly`)
-- **バリデーション**: Serializer層で画像URL・ブランド必須チェック
+- **権限制御**: `IsAuthenticatedOrReadOnly` + オブジェクトレベル権限(`IsOwnerOrReadOnly`)。写真追加/削除は親アイテムの所有者のみ
+- **トランザクション**: アイテム登録時に Item と初回 ItemPhoto を `transaction.atomic` で同時作成
+- **バリデーション**: Serializer層でブランド必須・初回写真URL必須チェック
 - **API文書化**: drf-spectacular で `/api/schema/swagger-ui/` を自動生成
 - **テスト**: pytest でエンドポイントごとの正常系・異常系・権限をカバー
 
@@ -252,13 +309,14 @@ S3設定は `AWS_STORAGE_BUCKET_NAME` と `AWS_S3_REGION_NAME` を使い、任�
 
 ## 6. 画面構成(フロントエンド)
 
-| 画面           | パス          | 使用コンポーネント               |
-| -------------- | ------------- | -------------------------------- |
-| ギャラリー一覧 | `/`           | react-photo-album(Masonry)       |
-| 投稿詳細       | `/posts/[id]` | shadcn/ui Card + Dialog          |
-| 投稿作成       | `/posts/new`  | React Hook Form + 画像プレビュー |
-| ログイン       | `/login`      | shadcn/ui Form                   |
-| 新規登録       | `/register`   | shadcn/ui Form                   |
+| 画面           | パス                   | 使用コンポーネント                                  |
+| -------------- | ---------------------- | --------------------------------------------------- |
+| ギャラリー一覧 | `/`                    | react-photo-album(Masonry、各アイテムの最新写真)    |
+| アイテム詳細   | `/items/[id]`          | shadcn/ui Card + Dialog(写真タイムライン表示)       |
+| アイテム登録   | `/items/new`           | React Hook Form + 画像プレビュー(スペック + 初回写真) |
+| 写真を追加     | `/items/[id]`(Dialog)  | 既存アイテムに育成記録を1枚追加                      |
+| ログイン       | `/login`               | shadcn/ui Form                                      |
+| 新規登録       | `/register`            | shadcn/ui Form                                      |
 
 **デザイン方針(挫折対策):**
 
@@ -330,11 +388,11 @@ graph TD
 
 | ステップ | 内容                                                                 | 領域      |
 | -------- | -------------------------------------------------------------------- | --------- |
-| 1        | Djangoプロジェクト初期化・User/Post/Likeモデル定義・マイグレーション | Backend   |
+| 1        | Djangoプロジェクト初期化・User/Item/ItemPhoto/Likeモデル定義・マイグレーション | Backend   |
 | 2        | DRF Serializer / ViewSet / Router 実装、JWT認証                      | Backend   |
 | 3        | pytest でAPIテスト、drf-spectacular でAPI文書化                      | Backend   |
 | 4        | S3署名付きURLによる画像アップロードAPI                               | Backend   |
-| 5        | Next.js + shadcn/ui でギャラリー・詳細・投稿・認証画面               | Frontend  |
+| 5        | Next.js + shadcn/ui でギャラリー・アイテム詳細・登録・認証画面       | Frontend  |
 | 6        | Docker Compose でローカル統合、疎通確認                              | Infra     |
 | 7        | RDS + ECS Fargate へデプロイ                                         | Infra/AWS |
 | 8        | S3+CloudFront でフロント・画像配信                                   | Infra/AWS |
